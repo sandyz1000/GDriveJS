@@ -1,0 +1,35 @@
+{
+  "name": "GDriveJS",
+  "version": "0.1.0",
+  "description": "Google Drive Fuse filesystem in nodejs",
+  "author": {
+    "name": "Sandip Dey",
+    "email": "sandip.dey1988@yahoo.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/sandyz1000/node-gdrive-fuse"
+  },
+  "files": [
+    "src"
+  ],
+  "homepage": "https://github.com/thejinx0r/node-gdrive-fuse",
+  "dependencies": {
+    "MD5": "^1.2.1",
+    "fs-extra": "^11.1.1",
+    "fusejs": "^1.4.3",
+    "googleapis": "^128.0.0",
+    "mmmagic": "^0.5.3",
+    "queue": "^7.0.0",
+    "request": "^2.60.0",
+    "sqlite3": "^5.1.6",
+    "winston": "~3.11.0"
+  },
+  "engine": "node",
+  "scripts": {
+    "start": "node ./dist/index.js",
+    "tsc": "tsc",
+    "dev": "ts-node-dev — respawn — pretty — transpile-only index.ts",
+    "lint": "eslint --fix ."
+  }
+}
