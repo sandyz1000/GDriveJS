@@ -1,7 +1,4 @@
-# This project is no longer maintained.
-# Checkout my other project: https://github.com/thejinx0r/DriveFS
-
-# GDriveF4JS
+# GDriveJS with FUSE User space in Rust
 
 ## Information
 This is a simple filesystem written in NodeJS to mount Google Drive as a local drive.

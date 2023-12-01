@@ -4,13 +4,12 @@ import fs from 'fs-extra';
 
 import pth from 'path';
 
-import folder from "./folder.es6.js";
+import {folder} from "./folder.js";
 const GFolder = folder.GFolder
-import f from "./file.es6.js";
-const GFile = f.GFile
+import { GFile, addNewFile  } from "./file.js";
 const uploadTree = folder.uploadTree
 
-import common from './common.es6.js';
+import {common} from './common.js';
 const config = common.config
 const dataLocation = common.dataLocation;
 const uploadLocation = common.uploadLocation;

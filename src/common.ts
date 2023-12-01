@@ -1,15 +1,13 @@
-"use strict";
-/*
-######################################
-######### Setup File Config ##########
-######################################
-*/
+// ######################################
+// ######### Setup File Config ##########
+// ######################################
+
 import { existsSync, readJSONSync, ensureDirSync, outputJson } from 'fs-extra';
 import { join } from 'path';
 import { transports as _transports, Logger } from 'winston';
 import { Database } from 'sqlite3';
 // setup oauth client
-import google, { drive, auth as _auth, options } from 'googleapis';
+import google, { drive_v3 as drive, oauth2_v2 as _auth } from 'googleapis';
 
 class Config {
 	public cacheLocation: string;
@@ -39,7 +37,7 @@ class Config {
 }
 
 let cfg = new Config(null, 0, 0, 0, 0);
-export const maxCache = ((config: Config) => {
+const maxCache = ((config: Config) => {
 	if (config.maxCacheSize) {
 		return config.maxCacheSize;
 	} else {
@@ -115,6 +113,4 @@ export const refreshAccessToken = (cb) => {
 }
 
 export const db = new Database(join(dataLocation, 'sqlite.db'));
-export const config = config;
-export const google = google;
 export const currentLargestInode = 1;

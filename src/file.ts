@@ -1,11 +1,10 @@
-"use strict";
 import { join, basename } from 'path';
 import { writeFile, close, stat, open as _open, read as _read, readdir, unlink } from 'fs-extra';
 import winston from 'winston';
 import { EventEmitter } from 'events';
 import request from 'request';
 
-import { config as _config, dataLocation as _dataLocation, uploadLocation as _uploadLocation, downloadLocation as _downloadLocation, logger as _logger, GDrive as _GDrive, oauth2Client as _oauth2Client, refreshAccessToken as _refreshAccessToken, maxCache as _maxCache, database } from './common.es6.js';
+import { config as _config, dataLocation as _dataLocation, uploadLocation as _uploadLocation, downloadLocation as _downloadLocation, logger as _logger, GDrive as _GDrive, oauth2Client as _oauth2Client, refreshAccessToken as _refreshAccessToken, maxCache as _maxCache, database } from './common.js';
 const config = _config
 const dataLocation = _dataLocation;
 const uploadLocation = _uploadLocation;
@@ -38,7 +37,7 @@ const buf0 = new Buffer(0);
 
 const baseUrlForDownload = "https://www.googleapis.com/drive/v2/files/"
 
-class GFile extends EventEmitter {
+export class GFile extends EventEmitter {
   inode: any;
   size: any;
   downloadUrl: any;
@@ -605,7 +604,7 @@ class GFile extends EventEmitter {
 *
 */
 
-const queue_fn = (size, cmd) => {
+export const queue_fn = (size, cmd) => {
   return (done) => {
     db.run(cmd, (err) => {
       if (err) {
@@ -763,7 +762,7 @@ const _delete_files_ = (start, end, rows) => {
 
 
 
-const addNewFile = (file, type, size) => {
+export const addNewFile = (file, type, size) => {
   // db.run "INSERT OR REPLACE INTO files (name, atime, type, size) VALUES ('#{file}', #{Date.now()}, '#{type}', #{size})", ->
   //   totalDownloadSize += size
   //   console.log totalDownloadSize
@@ -781,10 +780,3 @@ db.run("CREATE TABLE IF NOT EXISTS files (size INT, name TEXT unique, type INT, 
   // initialize_db()
   initialize_path(downloadLocation, "downloading");
 });
-
-const _GFile = GFile;
-export { _GFile as GFile };
-const _addNewFile = addNewFile;
-export { _addNewFile as addNewFile };
-const _queue_fn = queue_fn;
-export { _queue_fn as queue_fn };

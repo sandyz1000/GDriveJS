@@ -5,7 +5,7 @@ import request, { post } from 'request';
 import { join } from 'path';
 import { Magic as _Magic, MAGIC_MIME_TYPE } from 'mmmagic';
 
-import { config as _config, dataLocation as _dataLocation, uploadLocation as _uploadLocation, downloadLocation as _downloadLocation, logger as _logger, oauth2Client as _oauth2Client, refreshAccessToken } from './common.es6.js';
+import { config as _config, dataLocation as _dataLocation, uploadLocation as _uploadLocation, downloadLocation as _downloadLocation, logger as _logger, oauth2Client as _oauth2Client, refreshAccessToken } from './common.js';
 var config = _config
 var dataLocation = _dataLocation;
 var uploadLocation = _uploadLocation;

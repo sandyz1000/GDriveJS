@@ -9,13 +9,13 @@ const PosixError = _PosixError;
 import { has, getFromInode, getFromId, map, insert, delete, saveFolderTree, mapInodeToId, currentLargestInode } from './inodetree.js';
 
 //require the client so that it will load the folder tree correctly.
-import client from './client.es6.js';
+import client from './client.js';
 
-import { uploadTree as _uploadTree, GFolder as _GFolder, saveUploadTree as _saveUploadTree } from "./folder.es6.js";
+import { uploadTree as _uploadTree, GFolder as _GFolder, saveUploadTree as _saveUploadTree } from "./folder.js";
 const uploadTree = _uploadTree;
 const GFolder = _GFolder;
 const saveUploadTree = _saveUploadTree;
-import { GFile as _GFile, addNewFile as _addNewFile, queue_fn as _queue_fn } from "./file.es6.js";
+import { GFile as _GFile, addNewFile as _addNewFile, queue_fn as _queue_fn } from "./file.js";
 const GFile = _GFile;
 const addNewFile = _addNewFile;
 const queue_fn = _queue_fn;
@@ -23,7 +23,7 @@ import queue from 'queue';
 
 import { exec } from 'child_process';
 
-import { config as _config, dataLocation as _dataLocation, uploadLocation as _uploadLocation, downloadLocation as _downloadLocation, logger as _logger, GDrive, currentLargestInode as _currentLargestInode } from './common.es6.js';
+import { config as _config, dataLocation as _dataLocation, uploadLocation as _uploadLocation, downloadLocation as _downloadLocation, logger as _logger, GDrive, currentLargestInode as _currentLargestInode } from './common.js';
 const config = _config
 const dataLocation = _dataLocation;
 const uploadLocation = _uploadLocation;
@@ -401,20 +401,20 @@ class GDriveFS extends FileSystem {
                     //make sure it is empty
                     if (folder.children.length == 0) {
                         drive.files.trash({ fileId: folder.id }, (err, res) => {
-                                if (err) {
-                                    logger.error(`unable to remove folder ${path}`);
-                                    reply.err(errnoMap.EIO);
-                                    return;
-                                }
-                                const idx = parent.children.indexOf(childInode);
-                                if (idx >= 0) {
-                                    parent.children.splice(idx, 1);
-                                }
-                                delete (childInode);
+                            if (err) {
+                                logger.error(`unable to remove folder ${path}`);
+                                reply.err(errnoMap.EIO);
+                                return;
+                            }
+                            const idx = parent.children.indexOf(childInode);
+                            if (idx >= 0) {
+                                parent.children.splice(idx, 1);
+                            }
+                            delete (childInode);
 
-                                reply.err(0);
-                                saveFolderTree();
-                            });
+                            reply.err(0);
+                            saveFolderTree();
+                        });
                         return;
                     } else {
                         reply.err(errnoMap.ENOTEMPTY);
@@ -507,27 +507,27 @@ class GDriveFS extends FileSystem {
             saveFolderTree();
 
             _open(systemPath, 'w', (err, fd) => {
-                    if (err) {
-                        logger.error(`unable to create file ${inode} -- ${name}, ${err}`);
-                        reply.err(errnoMap[err.code]);
-                        return;
-                    }
-                    fileInfo.file_handle = fd;
-                    logger.debug("setting upload Tree");
-                    const upFile = {
-                        cache: cache,
-                        uploading: false
-                    };
-                    uploadTree.set(inode, upFile);
-                    saveUploadTree();
-                    const attr = {
-                        inode: inode,
-                        generation: 1,
-                        attr: file
-                    };
-                    reply.create(attr, fileInfo);
+                if (err) {
+                    logger.error(`unable to create file ${inode} -- ${name}, ${err}`);
+                    reply.err(errnoMap[err.code]);
                     return;
-                });
+                }
+                fileInfo.file_handle = fd;
+                logger.debug("setting upload Tree");
+                const upFile = {
+                    cache: cache,
+                    uploading: false
+                };
+                uploadTree.set(inode, upFile);
+                saveUploadTree();
+                const attr = {
+                    inode: inode,
+                    generation: 1,
+                    attr: file
+                };
+                reply.create(attr, fileInfo);
+                return;
+            });
         } else {
             reply.err(errnoMap.ENOENT);
         };
@@ -568,11 +568,11 @@ class GDriveFS extends FileSystem {
             saveFolderTree();
 
             drive.files.trash({ fileId: file.id }, (err, res) => {
-                    if (err) {
-                        logger.debug(`unable to remove file ${file.name}`);
-                    }
-                    reply.err(0); //TODO: handle case when google fails to delete a file
-                });
+                if (err) {
+                    logger.debug(`unable to remove file ${file.name}`);
+                }
+                reply.err(0); //TODO: handle case when google fails to delete a file
+            });
 
             if (uploadTree.has(childInode)) {
                 const cache = uploadTree.get(childInode).cache;
@@ -599,56 +599,56 @@ class GDriveFS extends FileSystem {
             logger.debug(`${inode} was in the upload tree`);
             // close the file
             close(fileInfo.file_handle, (err) => {
-                    if (err) {
-                        reply.err(err.errno);
-                        return;
-                    }
-                    reply.err(0);
+                if (err) {
+                    reply.err(err.errno);
+                    return;
+                }
+                reply.err(0);
 
-                    // upload file once file is closed
-                    if (uploadTree.has(inode)) {
-                        const upCache = uploadTree.get(inode);
-                        upCache.released = true;
-                        uploadTree.set(inode, upCache);
-                        saveUploadTree();
+                // upload file once file is closed
+                if (uploadTree.has(inode)) {
+                    const upCache = uploadTree.get(inode);
+                    upCache.released = true;
+                    uploadTree.set(inode, upCache);
+                    saveUploadTree();
 
-                        const file = getFromInode(inode);
-                        const parent = getFromId(file.parentid);
-                        /*
-                         three cases:
-                         if file size is 0: delete it and don't upload
-                         if file size is <=10MB, just upload it directly
-                         if file size is >10 MB, add to upload queue
-                         */
-                        if (0 < file.size && file.size <= 10485760) { //10MB
-                            parent.upload(file.name, inode, uploadCallback(inode, () => { }));
-                        } else if (file.size > 10485760) { }
-                        q.push((cb) => {
-                            if (parent instanceof GFile) {
-                                logger.debug(`While uploading, ${name} was a file - ${parent}`);
-                                cb();
-                                return;
-                            }
-                            parent.upload(file.name, inode, uploadCallback(inode, cb));
+                    const file = getFromInode(inode);
+                    const parent = getFromId(file.parentid);
+                    /*
+                     three cases:
+                     if file size is 0: delete it and don't upload
+                     if file size is <=10MB, just upload it directly
+                     if file size is >10 MB, add to upload queue
+                     */
+                    if (0 < file.size && file.size <= 10485760) { //10MB
+                        parent.upload(file.name, inode, uploadCallback(inode, () => { }));
+                    } else if (file.size > 10485760) { }
+                    q.push((cb) => {
+                        if (parent instanceof GFile) {
+                            logger.debug(`While uploading, ${name} was a file - ${parent}`);
+                            cb();
                             return;
-                        });
+                        }
+                        parent.upload(file.name, inode, uploadCallback(inode, cb));
+                        return;
+                    });
 
-                        q.start();
-                    } else {
-                        uploadTree.delete(inode);
-                        saveUploadTree();
-                    }
-                });
+                    q.start();
+                } else {
+                    uploadTree.delete(inode);
+                    saveUploadTree();
+                }
+            });
         } else if (fileInfo.file_handle) {
             close(fileInfo.file_handle, (err) => {
-                    if (err) {
-                        logger.error("There was an error closing file");
-                        logger.error(err);
-                        reply.err(err.errno);
-                        return;
-                    }
-                    reply.err(0);
-                });
+                if (err) {
+                    logger.error("There was an error closing file");
+                    logger.error(err);
+                    reply.err(err.errno);
+                    return;
+                }
+                reply.err(0);
+            });
         } else {
             reply.err(0);
         }
@@ -743,19 +743,19 @@ class GDriveFS extends FileSystem {
                 child.name = newName;
                 console.log("before google api");
                 drive.files.patch(params, (err) => {
-                        console.log("after google api");
-                        if (err) {
-                            logger.error(`There was an error with renaming file ${child.name}`);
-                            logger.error(err);
-                            reply.err(PosixError.EIO);
-                            return;
-                        }
-                        reply.err(0);
-                        if (newParentInode != oldParentInode) {
-                            newParent.children.push(childInode);
-                            oldParent.children.splice(oldParent.children.indexOf(childInode), 1);
-                        }
-                    });
+                    console.log("after google api");
+                    if (err) {
+                        logger.error(`There was an error with renaming file ${child.name}`);
+                        logger.error(err);
+                        reply.err(PosixError.EIO);
+                        return;
+                    }
+                    reply.err(0);
+                    if (newParentInode != oldParentInode) {
+                        newParent.children.push(childInode);
+                        oldParent.children.splice(oldParent.children.indexOf(childInode), 1);
+                    }
+                });
                 return;
             }
         }
@@ -806,53 +806,53 @@ const moveToDownload = (file, fd, uploadedFileLocation, start, cb) => {
 
     rstream.on('end', () => {
 
-            start += config.chunkSize;
-            wstream.end();
-            if (start < file.size) {
-                moveToDownload(file, fd, uploadedFileLocation, start, cb);
+        start += config.chunkSize;
+        wstream.end();
+        if (start < file.size) {
+            moveToDownload(file, fd, uploadedFileLocation, start, cb);
+            return;
+        }
+        close(fd, (err) => {
+            if (err) {
+                logger.error(`There was an error closing file ${fd} - ${file.id} - ${file.name} after moving upload file to download`);
+                logger.error(err);
+            }
+            var start = 0;
+            var end = Math.min(start + config.chunkSize, file.size) - 1;
+            var totalSize = 0;
+            var count = 0;
+            const basecmd = "INSERT OR REPLACE INTO files (name, atime, type, size) VALUES ";
+            var cmd = basecmd;
+            while (start < file.size) {
+                var size = end - start + 1;
+                count += 1;
+                totalSize += size;
+                if (count > 750) {
+                    cmd += `('${file.id}-${start}-${end}',${Date.now()},'downloading',${size})`;
+                    queue_fn(totalSize, cmd)(() => { });
+                    cmd = basecmd;
+                    count = 0;
+                    totalSize = 0;
+                } else {
+                    cmd += `('${file.id}-${start}-${end}',${Date.now()},'downloading',${size}),`;
+                }
+                start += config.chunkSize;
+                end = Math.min(start + config.chunkSize, file.size) - 1;
+            }
+            queue_fn(totalSize, cmd.slice(0, -1))(() => { });
+            if (err) {
+                logger.debug(`unable to close file after transffering ${uploadedFile}`);
+                cb();
                 return;
             }
-            close(fd, (err) => {
-                    if (err) {
-                        logger.error(`There was an error closing file ${fd} - ${file.id} - ${file.name} after moving upload file to download`);
-                        logger.error(err);
-                    }
-                    var start = 0;
-                    var end = Math.min(start + config.chunkSize, file.size) - 1;
-                    var totalSize = 0;
-                    var count = 0;
-                    const basecmd = "INSERT OR REPLACE INTO files (name, atime, type, size) VALUES ";
-                    var cmd = basecmd;
-                    while (start < file.size) {
-                        var size = end - start + 1;
-                        count += 1;
-                        totalSize += size;
-                        if (count > 750) {
-                            cmd += `('${file.id}-${start}-${end}',${Date.now()},'downloading',${size})`;
-                            queue_fn(totalSize, cmd)(() => { });
-                            cmd = basecmd;
-                            count = 0;
-                            totalSize = 0;
-                        } else {
-                            cmd += `('${file.id}-${start}-${end}',${Date.now()},'downloading',${size}),`;
-                        }
-                        start += config.chunkSize;
-                        end = Math.min(start + config.chunkSize, file.size) - 1;
-                    }
-                    queue_fn(totalSize, cmd.slice(0, -1))(() => { });
-                    if (err) {
-                        logger.debug(`unable to close file after transffering ${uploadedFile}`);
-                        cb();
-                        return;
-                    }
-                    _unlink(uploadedFileLocation, (err) => {
-                            if (err) {
-                                logger.error(`unable to remove file ${uploadedFile}`);
-                            }
-                            cb();
-                        });
-                });
+            _unlink(uploadedFileLocation, (err) => {
+                if (err) {
+                    logger.error(`unable to remove file ${uploadedFile}`);
+                }
+                cb();
+            });
         });
+    });
 
     rstream.pipe(wstream);
 }
@@ -882,9 +882,9 @@ const uploadCallback = (inode, cb) => {
             logger.debug(`Retrying upload: "${file.name}".`);
             q.push(
                 (_cb) => {
-                parent.upload(file.name, inode, uploadCallback(inode, _cb));
-                return;
-            });
+                    parent.upload(file.name, inode, uploadCallback(inode, _cb));
+                    return;
+                });
             q.start();
         }
 
@@ -934,14 +934,14 @@ const uploadCallback = (inode, cb) => {
 
         // move the file to download folder after finished uploading
         _open(uploadedFileLocation, 'r', (err, fd) => {
-                if (err) {
-                    logger.debug(`could not open ${uploadedFileLocation} for copying file from upload to uploader`);
-                    logger.debug(err);
-                    return;
-                }
+            if (err) {
+                logger.debug(`could not open ${uploadedFileLocation} for copying file from upload to uploader`);
+                logger.debug(err);
+                return;
+            }
 
-                moveToDownload(file, fd, uploadedFileLocation, 0, cb);
-            });
+            moveToDownload(file, fd, uploadedFileLocation, 0, cb);
+        });
 
     };
 }
@@ -967,23 +967,23 @@ const recurseResumeUploadingFilesFromUploadFolder = (inode, files) => {
 
                 /* make sure that the file is the same size as what's been reported in the inodeTree */
                 _stat(join(uploadLocation, cache), (err, stat) => {
-                        if (err) {
-                            logger.debug("There was an error while stating lost upload");
-                            logger.debug(err);
-                            return;
-                        }
-                        if (stat.size == file.size) {
-                            const parent = getFromId(file.parentid);
+                    if (err) {
+                        logger.debug("There was an error while stating lost upload");
+                        logger.debug(err);
+                        return;
+                    }
+                    if (stat.size == file.size) {
+                        const parent = getFromId(file.parentid);
 
-                            // ensure that the parent is a folder
-                            if (parent instanceof GFolder) {
+                        // ensure that the parent is a folder
+                        if (parent instanceof GFolder) {
 
-                                logger.debug("a lost uploading file was found: ", file.name);
+                            logger.debug("a lost uploading file was found: ", file.name);
 
-                                // everything is good now, so we can enqueue the uploading
-                                uploadTree.set(inode, upFile);
-                                q.push(
-                                    (cb) => {
+                            // everything is good now, so we can enqueue the uploading
+                            uploadTree.set(inode, upFile);
+                            q.push(
+                                (cb) => {
                                     if (parent instanceof GFile) {
                                         logger.debug(`While uploading, ${name} was a file - ${parent}`);
                                         cb();
@@ -993,10 +993,10 @@ const recurseResumeUploadingFilesFromUploadFolder = (inode, files) => {
                                     return;
                                 });
 
-                                q.start();
-                            }
+                            q.start();
                         }
-                    });
+                    }
+                });
             }
 
         }
@@ -1022,10 +1022,10 @@ const resumeUploadingFilesFromUploadFolder = () => {
     */
 
     _readdir(uploadLocation, (err, files) => {
-            const filesToBeUploaded = new Set(files);
+        const filesToBeUploaded = new Set(files);
 
-            recurseResumeUploadingFilesFromUploadFolder(currentLargestInode, filesToBeUploaded);
-        });
+        recurseResumeUploadingFilesFromUploadFolder(currentLargestInode, filesToBeUploaded);
+    });
 }
 
 // resume file uploading
@@ -1054,8 +1054,8 @@ const resumeUpload = () => {
 
                         q.push(
                             (cb) => {
-                            parent.upload(file.name, inode, uploadCallback(inode, cb));
-                        });
+                                parent.upload(file.name, inode, uploadCallback(inode, cb));
+                            });
                         q.start();
                         continue;
                     } else {
@@ -1111,32 +1111,32 @@ const start = (count) => {
             const debug = false;
 
             exec(command, (err, data) => {
-                    try {
-                        ensureDirSync(config.mountPoint);
-                    } catch (e) {
-                        logger.error("could not ensure the mountpoint existed.");
-                        process.exit(1);
-                    }
-                    if (err) {
-                        logger.error("unmount error:", err);
-                    }
-                    if (data) {
-                        logger.info("unmounting output:", data);
-                    }
-                    const opts = ["GDrive", "-o", "allow_other", config.mountPoint];
-                    // opts.push "-s"
-                    // opts.push "-f"
-                    // opts.push "-mt"
-                    // opts.push("-d")
-                    _fuse.mount({
-                        filesystem: GDriveFS,
-                        options: opts.concat(add_opts)
-                    });
-
-                    logger.log('info', `mount point: ${config.mountPoint}`);
-                    setTimeout(resumeUpload, 120000);
-                    return;
+                try {
+                    ensureDirSync(config.mountPoint);
+                } catch (e) {
+                    logger.error("could not ensure the mountpoint existed.");
+                    process.exit(1);
+                }
+                if (err) {
+                    logger.error("unmount error:", err);
+                }
+                if (data) {
+                    logger.info("unmounting output:", data);
+                }
+                const opts = ["GDrive", "-o", "allow_other", config.mountPoint];
+                // opts.push "-s"
+                // opts.push "-f"
+                // opts.push "-mt"
+                // opts.push("-d")
+                _fuse.mount({
+                    filesystem: GDriveFS,
+                    options: opts.concat(add_opts)
                 });
+
+                logger.log('info', `mount point: ${config.mountPoint}`);
+                setTimeout(resumeUpload, 120000);
+                return;
+            });
         } catch (e) {
             logger.log("error", `Exception when starting file system: ${e}`);
         }
